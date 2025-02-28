@@ -1,215 +1,232 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
-import javax.swing.Timer;
+/*
+ * Step-by-Step Algorithm for Tetris Game
+ * 
+ * 1. Initialize game board, block queue, and active block.
+ * 2. Start a game loop using a timer that moves blocks down periodically.
+ * 3. Generate a new block and set its initial position.
+ * 4. Handle user inputs:
+ *      - Left arrow: Move block left.
+ *      - Right arrow: Move block right.
+ *      - Down arrow: Move block down.
+ *      - Up arrow: Rotate block.
+ * 5. Move the block down automatically every timer tick:
+ *      - If it can move down, move it.
+ *      - Otherwise, place the block on the board.
+ *      - Check if any row is full, then clear it and update the score.
+ *      - Generate a new block and reset position.
+ *      - If new block placement is not possible, set game over.
+ * 6. Draw the game board, blocks, and grid lines.
+ * 7. End the game if no space is left for a new block.
+ */
 
-public class TetrisGame {
-    final int WIDTH = 10, HEIGHT = 20;
-    int[][] gameBoard = new int[HEIGHT][WIDTH];
-    Queue<Block> blockQueue = new LinkedList<>();
-    int score = 0;
-    long startTime;
-    boolean gameOver = false;
 
-    class Block {
-        int shape[][];
-        Color color;
-        int x, y;
+ 
+import javax.swing.*; // Import Swing components for GUI
+import java.awt.*;   // Import AWT for graphics rendering
+import java.awt.event.*;   // Import event handling classes
+import java.util.*;     // Import utility classes like Queue and Ra
+import java.util.Queue;
 
-        public Block(int[][] shape, Color color) {
-            this.shape = shape;
-            this.color = color;
-            this.x = WIDTH / 2 - shape[0].length / 2;
-            this.y = 0;
-        }
+public class TetrisGame extends JPanel {
+    final int WIDTH = 10, HEIGHT = 20; // Game board size
+    final int BLOCK_SIZE = 30; // Size of each block
+    private int[][] board = new int[HEIGHT][WIDTH]; // Stack for game state
+    private Queue<int[][]> blockQueue = new LinkedList<>(); // Queue for falling blocks
+    private int[][] currentBlock; // Current active block
+    private int blockX = WIDTH / 2 - 1, blockY = 0; // Block position
+    private boolean gameOver = false;
+    private int score = 0;
+    private javax.swing.Timer timer; // FIX: Explicitly use javax.swing.Timer
 
-        public void rotate() {
-            int n = shape.length, m = shape[0].length;
-            int[][] rotatedShape = new int[m][n];
+    // Shapes of Tetris blocks
+    private final int[][][] SHAPES = {
+            {{1, 1, 1, 1}}, // Line
+            {{1, 1}, {1, 1}}, // Square
+            {{0, 1, 0}, {1, 1, 1}}, // T-Shape
+            {{1, 1, 0}, {0, 1, 1}}, // S-Shape
+            {{0, 1, 1}, {1, 1, 0}}, // Z-Shape
+            {{1, 0, 0}, {1, 1, 1}}, // L-Shape
+            {{0, 0, 1}, {1, 1, 1}} // J-Shape
+    };
 
-            for (int i = 0; i < n; i++)
-                for (int j = 0; j < m; j++)
-                    rotatedShape[j][n - 1 - i] = shape[i][j];
 
-            if (!collides(x, y, rotatedShape))
-                shape = rotatedShape;
-        }
-    }
+    // Constructor to set up game panel
+    public TetrisGame() {
+        // Set panel size
+        setPreferredSize(new Dimension(WIDTH * BLOCK_SIZE, HEIGHT * BLOCK_SIZE));
+        // Set background color
+        setBackground(Color.WHITE);
+        // Enable keyboard input
+        setFocusable(true);
 
-    JFrame frame;
-    JPanel panel;
-    JLabel scoreLabel, timeLabel;
-    Timer timer;
+        generateBlock();  // Generate the first block
+        timer = new javax.swing.Timer(500, e -> gameLoop()); // FIXED: javax.swing.Timer
+        timer.start();  // Start the game loop
 
-    public void init() {
-        frame = new JFrame("Tetris Game");
-        panel = new JPanel() {
-            @Override
-            public void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                drawBoard(g);
-            }
-        };
-        panel.setPreferredSize(new Dimension(300, 600));
-        panel.setFocusable(true);
-        panel.addKeyListener(new KeyAdapter() {
-            @Override
+
+        // Add keyboard controls
+        addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
-                handleKeyPress(e);
-            }
-        });
-
-        scoreLabel = new JLabel("Score: 0");
-        timeLabel = new JLabel("Time: 0s");
-        JPanel topPanel = new JPanel(new FlowLayout());
-        topPanel.add(scoreLabel);
-        topPanel.add(timeLabel);
-
-        frame.setLayout(new BorderLayout());
-        frame.add(topPanel, BorderLayout.NORTH);
-        frame.add(panel, BorderLayout.CENTER);
-        frame.pack();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-
-        generateBlock();
-        startTime = System.currentTimeMillis();
-        startGameLoop();
-    }
-
-    public void drawBoard(Graphics g) {
-        for (int i = 0; i < HEIGHT; i++)
-            for (int j = 0; j < WIDTH; j++)
-                if (gameBoard[i][j] != 0) {
-                    g.setColor(Color.GRAY);
-                    g.fillRect(j * 30, i * 30, 30, 30);
+                if (gameOver) return;  // Ignore input if game is over
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_LEFT -> moveLeft();   // Move left
+                    case KeyEvent.VK_RIGHT -> moveRight();  // Move Right
+                    case KeyEvent.VK_DOWN -> moveDown();     // Move down
+                    case KeyEvent.VK_UP -> rotateBlock();    // Rotate
                 }
-
-        Block currentBlock = blockQueue.peek();
-        if (currentBlock != null) {
-            g.setColor(currentBlock.color);
-            for (int i = 0; i < currentBlock.shape.length; i++)
-                for (int j = 0; j < currentBlock.shape[i].length; j++)
-                    if (currentBlock.shape[i][j] == 1)
-                        g.fillRect((currentBlock.x + j) * 30, (currentBlock.y + i) * 30, 30, 30);
-        }
-    }
-
-    public void generateBlock() {
-        int[][][] shapes = {
-            {{1, 1, 1}, {0, 1, 0}}, {{1, 1}, {1, 1}}, {{1, 1, 0}, {0, 1, 1}}, {{0, 1, 1}, {1, 1, 0}}, {{1, 1, 1, 1}}
-        };
-        Color[] colors = {Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.CYAN};
-
-        Random rand = new Random();
-        int shapeIndex = rand.nextInt(shapes.length);
-        Block newBlock = new Block(shapes[shapeIndex], colors[shapeIndex]);
-        blockQueue.add(newBlock);
-
-        if (collides(newBlock.x, newBlock.y, newBlock.shape)) {
-            gameOver = true;
-            timer.stop();
-            JOptionPane.showMessageDialog(frame, "Game Over! Final Score: " + score);
-            System.exit(0);
-        }
-    }
-
-    public void startGameLoop() {
-        timer = new Timer(500, e -> {
-            if (!gameOver) {
-                moveBlockDown();
-                timeLabel.setText("Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s");
-                panel.repaint();
+                repaint();   // Refresh display
             }
         });
-        timer.start();
     }
 
-    public void moveBlockDown() {
-        Block currentBlock = blockQueue.peek();
-        if (currentBlock != null) {
-            if (canMoveDown(currentBlock))
-                currentBlock.y++;
-            else {
-                placeBlock(currentBlock);
-                generateBlock();
+    // Game loop function
+    private void gameLoop() {
+        if (gameOver) {
+            timer.stop();  // Stop the game
+            JOptionPane.showMessageDialog(this, "Game Over! Score: " + score);   // Show final score
+            return;
+        }
+
+        moveDown();    // Move block down each tick
+        repaint();     // Refresh display
+    }
+
+
+    // Generate a random block and add it to the queue
+    private void generateBlock() {
+        currentBlock = SHAPES[new Random().nextInt(SHAPES.length)];
+        blockQueue.add(currentBlock);
+    }
+
+     // Move block left if possible
+    private void moveLeft() {
+        if (canMove(blockX - 1, blockY)) blockX--;
+    }
+
+     // Move block right if possible
+    private void moveRight() {
+        if (canMove(blockX + 1, blockY)) blockX++;
+    }
+
+     // Move block down or place it if it can't move further
+    private void moveDown() {
+        if (canMove(blockX, blockY + 1)) {
+            blockY++;
+        } else {
+            placeBlock();   // Place block in board
+            checkRows();    // Check for full rows
+            generateBlock();   // Create a new block
+            blockX = WIDTH / 2 - 1;   // Reset block position
+            blockY = 0;
+            if (!canMove(blockX, blockY)) gameOver = true;    // End game if new block can't fit
+        }
+    }
+
+     // Rotate the current block
+    private void rotateBlock() {
+        int rows = currentBlock.length, cols = currentBlock[0].length;
+        int[][] rotated = new int[cols][rows];
+
+        // Rotate block by 90 degrees
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                rotated[x][rows - y - 1] = currentBlock[y][x];
+            }
+        }
+
+        if (canMove(blockX, blockY, rotated)) currentBlock = rotated;  // Apply rotation if valid
+    }
+
+
+    // Check if block can move to a new position
+    private boolean canMove(int newX, int newY) {
+        return canMove(newX, newY, currentBlock);
+    }
+
+    private boolean canMove(int newX, int newY, int[][] block) {
+        for (int y = 0; y < block.length; y++) {
+            for (int x = 0; x < block[y].length; x++) {
+                if (block[y][x] == 1) {
+                    int newXPos = newX + x, newYPos = newY + y;
+                    if (newXPos < 0 || newXPos >= WIDTH || newYPos >= HEIGHT || board[newYPos][newXPos] == 1) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    // Place the block on the game board
+    private void placeBlock() {
+        for (int y = 0; y < currentBlock.length; y++) {
+            for (int x = 0; x < currentBlock[y].length; x++) {
+                if (currentBlock[y][x] == 1) {
+                    board[blockY + y][blockX + x] = 1;
+                }
             }
         }
     }
 
-    public boolean canMoveDown(Block block) {
-        return !collides(block.x, block.y + 1, block.shape);
-    }
-
-    public boolean collides(int newX, int newY, int[][] shape) {
-        for (int i = 0; i < shape.length; i++)
-            for (int j = 0; j < shape[i].length; j++)
-                if (shape[i][j] == 1 && (newY + i >= HEIGHT || newX + j < 0 || newX + j >= WIDTH || gameBoard[newY + i][newX + j] != 0))
-                    return true;
-        return false;
-    }
-
-    public void placeBlock(Block block) {
-        for (int i = 0; i < block.shape.length; i++)
-            for (int j = 0; j < block.shape[i].length; j++)
-                if (block.shape[i][j] == 1)
-                    gameBoard[block.y + i][block.x + j] = 1;
-
-        blockQueue.poll();
-        checkRows();
-    }
-
-    public void checkRows() {
-        for (int i = HEIGHT - 1; i >= 0; i--) {
+     // Check for and clear full rows
+    private void checkRows() {
+        for (int y = HEIGHT - 1; y >= 0; y--) {
             boolean fullRow = true;
-            for (int j = 0; j < WIDTH; j++)
-                if (gameBoard[i][j] == 0)
+            for (int x = 0; x < WIDTH; x++) {
+                if (board[y][x] == 0) {
                     fullRow = false;
-
+                    break;
+                }
+            }
             if (fullRow) {
-                score += 100;
-                scoreLabel.setText("Score: " + score);
-
-                for (int k = i; k > 0; k--)
-                    System.arraycopy(gameBoard[k - 1], 0, gameBoard[k], 0, WIDTH);
-
-                Arrays.fill(gameBoard[0], 0);
-                i++;
+                score += 10;
+                for (int newY = y; newY > 0; newY--) {
+                    System.arraycopy(board[newY - 1], 0, board[newY], 0, WIDTH);
+                }
+                Arrays.fill(board[0], 0);
+                y++;
             }
         }
     }
 
-    public void handleKeyPress(KeyEvent e) {
-        Block currentBlock = blockQueue.peek();
-        if (currentBlock == null) return;
+    // Render the game graphics
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.setColor(Color.GRAY);
 
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_LEFT:
-                if (!collides(currentBlock.x - 1, currentBlock.y, currentBlock.shape))
-                    currentBlock.x--;
-                break;
-            case KeyEvent.VK_RIGHT:
-                if (!collides(currentBlock.x + 1, currentBlock.y, currentBlock.shape))
-                    currentBlock.x++;
-                break;
-            case KeyEvent.VK_DOWN:
-                moveBlockDown();
-                break;
-            case KeyEvent.VK_SPACE:
-                currentBlock.rotate();
-                break;
-            case KeyEvent.VK_ENTER:
-                while (canMoveDown(currentBlock))
-                    currentBlock.y++;
-                placeBlock(currentBlock);
-                generateBlock();
-                break;
+        for (int x = 0; x <= WIDTH; x++) {
+            g.drawLine(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, HEIGHT * BLOCK_SIZE);
         }
-        panel.repaint();
+        for (int y = 0; y <= HEIGHT; y++) {
+            g.drawLine(0, y * BLOCK_SIZE, WIDTH * BLOCK_SIZE, y * BLOCK_SIZE);
+        }
+
+        g.setColor(Color.BLUE);
+        for (int y = 0; y < HEIGHT; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                if (board[y][x] == 1) {
+                    g.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                }
+            }
+        }
+
+        g.setColor(Color.RED);
+        for (int y = 0; y < currentBlock.length; y++) {
+            for (int x = 0; x < currentBlock[y].length; x++) {
+                if (currentBlock[y][x] == 1) {
+                    g.fillRect((blockX + x) * BLOCK_SIZE, (blockY + y) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                }
+            }
+        }
     }
 
     public static void main(String[] args) {
-        new TetrisGame().init();
+        JFrame frame = new JFrame("Tetris Game");
+        TetrisGame game = new TetrisGame();
+        frame.add(game);
+        frame.pack();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
     }
 }
