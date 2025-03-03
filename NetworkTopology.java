@@ -5,21 +5,69 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// Graph class to represent the network
+/*
+Algorithm for Network Topology Optimizer:
+
+1. **Graph Representation**  
+   - Create a `Graph` class to store nodes and edges.  
+   - Use a HashMap to store node names and their coordinates.  
+   - Use an adjacency list to store edges between nodes with cost and bandwidth.  
+
+2. **Add Nodes and Edges**  
+   - `addNode(name, x, y)`: Adds a node with its position.  
+   - `addEdge(from, to, cost, bandwidth)`: Adds an edge between two nodes with a cost and bandwidth.  
+
+3. **Find Minimum Spanning Tree (MST) using Prim’s Algorithm**  
+   - Start from an arbitrary node.  
+   - Use a priority queue (Min-Heap) to store edges based on cost.  
+   - Maintain a set of visited nodes.  
+   - Pick the edge with the minimum cost that connects an unvisited node.  
+   - Add the node to the visited set and push its edges to the queue.  
+   - Repeat until all nodes are visited.  
+   - Compute total cost and total latency (calculated as `100 / bandwidth`).  
+
+4. **Find Shortest Path using Dijkstra’s Algorithm**  
+   - Initialize all node distances to infinity except the start node.  
+   - Use a priority queue to store nodes based on the shortest known distance.  
+   - Extract the node with the smallest distance.  
+   - Update the distance of its neighbors if a shorter path is found.  
+   - Continue until reaching the destination node.  
+   - Return the shortest path cost and total latency.  
+
+5. **Graphical User Interface (GUI) using Java Swing**  
+   - Create a `JFrame` window with buttons to add nodes, add edges, find MST, and find the shortest path.  
+   - Use `JOptionPane` to take user input for node names and edge properties.  
+   - Use a custom `DrawPanel` to visualize the network with nodes and edges.  
+   - Implement `MouseListener` to allow node selection using mouse clicks.  
+
+6. **User Interactions and Output**  
+   - When the user adds a node, store it and repaint the canvas.  
+   - When the user adds an edge, store it and repaint the canvas.  
+   - When the user selects "Find MST", compute the MST using Prim’s algorithm and display results.  
+   - When the user selects "Find Shortest Path", compute the path using Dijkstra’s algorithm and display results.  
+   - Display the results in a text area (`JTextArea`).  
+
+7. **Main Function**  
+   - Launch the GUI using `SwingUtilities.invokeLater()`.  
+*/
+
+
+// Graph class to represent the network topology
 class Graph {
-    private Map<String, Point> nodes = new HashMap<>();
-    private Map<String, List<Edge>> edges = new HashMap<>();
+    private Map<String, Point> nodes = new HashMap<>();   // Stores nodes and their positions
+    private Map<String, List<Edge>> edges = new HashMap<>();   // Stores edges between nodes
+
 
     // Add a node with name and position
-    public void addNode(String name, int x, int y) {
-        nodes.put(name, new Point(x, y));
-        edges.putIfAbsent(name, new ArrayList<>());
+    public void addNode(String name, int x, int y) {  
+        nodes.put(name, new Point(x, y));  // Store the node with its coordinates
+        edges.putIfAbsent(name, new ArrayList<>());  // Initialize edge list for the node 
     }
 
     // Add an edge between two nodes with cost and bandwidth
     public void addEdge(String from, String to, int cost, int bandwidth) {
-        edges.get(from).add(new Edge(from, to, cost, bandwidth));
-        edges.get(to).add(new Edge(to, from, cost, bandwidth));
+        edges.get(from).add(new Edge(from, to, cost, bandwidth));  // Add edge in both directions
+        edges.get(to).add(new Edge(to, from, cost, bandwidth));   // Since the graph is undirected
     }
 
     // Get all edges connected to a node
@@ -39,28 +87,29 @@ class Graph {
 
     // Prim's algorithm for MST considering cost and latency (bandwidth)
     public NetworkResult primMST() {
-        if (nodes.isEmpty()) return new NetworkResult(0, 0);
+        if (nodes.isEmpty()) return new NetworkResult(0, 0);  // If graph is empty, return zero cost and latency
         
         // Priority Queue to sort edges based on cost and bandwidth
         PriorityQueue<Edge> pq = new PriorityQueue<>(Comparator.comparingInt(Edge::getCost));
         Set<String> visited = new HashSet<>();
         String start = nodes.keySet().iterator().next();
         visited.add(start);
-        pq.addAll(edges.get(start));
+        pq.addAll(edges.get(start));  // Add all edges of the start node
 
-        int totalCost = 0;
-        int totalLatency = 0;
+        int totalCost = 0;  // Stores the total cost of MST
+        int totalLatency = 0;  // Stores the total latency (inverse of bandwidth)
+
 
         // Apply Prim's algorithm for MST
         while (!pq.isEmpty()) {
-            Edge edge = pq.poll();
-            if (visited.contains(edge.to)) continue;
-            visited.add(edge.to);
-            totalCost += edge.cost;
+            Edge edge = pq.poll();  // Get the edge with minimum cost
+            if (visited.contains(edge.to)) continue;  // If node is already visited, skip it
+            visited.add(edge.to);   // Mark the node as visited
+            totalCost += edge.cost;   // Add edge cost to total cost
             totalLatency += (100 / edge.bandwidth); // Calculate latency as inverse of bandwidth
-            pq.addAll(edges.get(edge.to));
+            pq.addAll(edges.get(edge.to));  // Add new edges from the visited node to the queue
         }
-        return new NetworkResult(totalCost, totalLatency);
+        return new NetworkResult(totalCost, totalLatency);   // Return the total MST cost and latency
     }
 
     // Dijkstra's algorithm for the shortest path considering cost and latency
@@ -71,34 +120,38 @@ class Graph {
         PriorityQueue<Edge> pq = new PriorityQueue<>(Comparator.comparingInt(Edge::getCost));
         Map<String, Integer> distance = new HashMap<>();
         Map<String, Integer> latency = new HashMap<>();
+
+        // Initialize all nodes with maximum values
         for (String node : edges.keySet()) {
             distance.put(node, Integer.MAX_VALUE);
             latency.put(node, Integer.MAX_VALUE);
         }
 
-        distance.put(start, 0);
-        latency.put(start, 0);
-        pq.add(new Edge(start, start, 0, 0));
+        distance.put(start, 0); // Distance to start node is 0
+        latency.put(start, 0);  
+        pq.add(new Edge(start, start, 0, 0));  // Start the queue from the start node
+
 
         // Apply Dijkstra's algorithm for shortest path
         while (!pq.isEmpty()) {
-            Edge edge = pq.poll();
+            Edge edge = pq.poll();  // Get the minimum cost edge
             if (edge.to.equals(end)) {
-                return new NetworkResult(distance.get(end), latency.get(end));
+                return new NetworkResult(distance.get(end), latency.get(end));  // Return the shortest path cost and latency
             }
 
             for (Edge neighbor : edges.get(edge.to)) {
-                int newDist = distance.get(edge.to) + neighbor.cost;
-                int newLatency = latency.get(edge.to) + (100 / neighbor.bandwidth); // Latency based on bandwidth
+                int newDist = distance.get(edge.to) + neighbor.cost;  // Calculate new distance
+                int newLatency = latency.get(edge.to) + (100 / neighbor.bandwidth); // Calculate new latency
 
+                // If a shorter path is found, update it
                 if (newDist < distance.get(neighbor.to) || newLatency < latency.get(neighbor.to)) {
                     distance.put(neighbor.to, newDist);
                     latency.put(neighbor.to, newLatency);
-                    pq.add(new Edge(neighbor.to, neighbor.to, newDist, neighbor.bandwidth));
+                    pq.add(new Edge(neighbor.to, neighbor.to, newDist, neighbor.bandwidth));  // Add to priority queue
                 }
             }
         }
-        return new NetworkResult(-1, -1);
+        return new NetworkResult(-1, -1);  // If no path is found, return -1
     }
 }
 
@@ -141,9 +194,9 @@ class NetworkResult {
 
 // GUI class for network topology visualization and interaction
 class NetworkTopologyGUI extends JFrame {
-    private Graph graph = new Graph();
-    private JTextArea outputArea = new JTextArea(10, 40);
-    private DrawPanel drawPanel = new DrawPanel();
+    private Graph graph = new Graph();  // Graph instance
+    private JTextArea outputArea = new JTextArea(10, 40);   // Output text area
+    private DrawPanel drawPanel = new DrawPanel();  // Panel for drawing network
 
     private String selectedNode = null;
 
