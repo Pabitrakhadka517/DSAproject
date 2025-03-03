@@ -108,3 +108,28 @@ public class WebCrawler {
         crawler.startCrawling("https://example.com"); // Start crawling from this URL
     }
 }
+
+
+/*
+Expected Output:
+----------------
+- The program will start crawling from "https://example.com".
+- It will extract and enqueue two new URLs per page: "https://example.com/next1" and "https://example.com/next2".
+- The process will continue until max depth (2) is reached.
+- URLs will be crawled in parallel using multiple threads.
+
+Example output (order may vary due to multithreading):
+
+Crawling: https://example.com
+Crawling: https://example.com/next1
+Crawling: https://example.com/next2
+Crawling: https://example.com/next1/next1
+Crawling: https://example.com/next1/next2
+Crawling: https://example.com/next2/next1
+Crawling: https://example.com/next2/next2
+
+If a page fetch fails:
+Failed to fetch: https://example.com/next1 | Error: Connection timed out
+
+Note: The exact order of crawling may vary due to concurrent execution.
+*/

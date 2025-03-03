@@ -137,3 +137,25 @@ public class QuestionSixA {
         oddThread.start();
     }
 }
+
+
+/*
+Expected Output for n = 5:
+--------------------------------
+0102030405
+
+Explanation:
+1. `printZero()` prints `0`
+2. `printOdd()` prints `1`
+3. `printZero()` prints `0`
+4. `printEven()` prints `2`
+5. `printZero()` prints `0`
+6. `printOdd()` prints `3`
+7. `printZero()` prints `0`
+8. `printEven()` prints `4`
+9. `printZero()` prints `0`
+10. `printOdd()` prints `5`
+
+Final Output:
+0102030405
+*/

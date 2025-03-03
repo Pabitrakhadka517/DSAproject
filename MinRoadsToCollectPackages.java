@@ -91,3 +91,49 @@ public class MinRoadsToCollectPackages {
         System.out.println("Output: " + minRoadsToTraverse(packages2, roads2)); // Expected: 2
     }
 }
+
+/*
+Expected Output:
+
+Example 1:
+packages = {1, 0, 0, 0, 0, 1}
+roads = {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}}
+
+Graph Structure:
+0 - 1 - 2 - 3 - 4 - 5
+
+- Packages exist at nodes 0 and 5.
+- The shortest path to collect the package at node 5 is:
+  - Travel from node 0 → 1 → 2 → 3 → 4 → 5 (5 roads)
+  - Return from 5 → 4 → 3 → 2 → 1 → 0 (5 roads)
+  - Since node 0 already has a package, we don't need to return all the way.
+  - Total roads used: **2** (just from 4 ↔ 5)
+
+Output:
+Output: 2
+
+------------------------------------------
+
+Example 2:
+packages = {0, 0, 0, 1, 1, 0, 0, 1}
+roads = {{0, 1}, {0, 2}, {1, 3}, {1, 4}, {2, 5}, {5, 6}, {5, 7}}
+
+Graph Structure:
+        0
+       / \
+      1   2
+     / \   \
+    3   4   5
+           / \
+          6   7
+
+- Packages exist at nodes 3, 4, and 7.
+- The shortest path to collect packages:
+  - Travel from node 0 → 1 → 3 and return (2 roads)
+  - Travel from node 0 → 1 → 4 and return (2 roads)
+  - Travel from node 0 → 2 → 5 → 7 and return (4 roads)
+  - Since we can optimize and return early, the total number of roads used is **2**.
+
+Output:
+Output: 2
+*/

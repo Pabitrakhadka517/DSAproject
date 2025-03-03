@@ -70,3 +70,33 @@ class KthLowestInvestmentReturn {
         System.out.println(kthSmallestProduct(returns1_2, returns2_2, k2)); // Expected Output: 0
     }
 }
+
+/*
+Expected Output:
+
+Test Case 1:
+returns1 = {2, 5}, returns2 = {3, 4}, k = 2
+
+Step-by-step extraction:
+1. 2 * 3 = 6 (smallest)
+2. 2 * 4 = 8 (2nd smallest) -> This is the answer
+
+Output:
+8
+
+Test Case 2:
+returns1 = {-4, -2, 0, 3}, returns2 = {2, 4}, k = 6
+
+Step-by-step extraction:
+1. (-4) * 2 = -8 (smallest)
+2. (-4) * 4 = -16 (not smaller than -8, skipped)
+3. (-2) * 2 = -4 (2nd smallest)
+4. (-2) * 4 = -8 (not smaller than -4, skipped)
+5. 0 * 2 = 0 (3rd smallest)
+6. 0 * 4 = 0 (4th smallest)
+7. 3 * 2 = 6 (5th smallest)
+8. 3 * 4 = 12 (6th smallest) -> This is the answer
+
+Output:
+0
+*/

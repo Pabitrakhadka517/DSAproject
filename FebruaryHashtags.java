@@ -106,3 +106,21 @@ class Tweet {
         this.tweetDate = tweetDate;
     }
 }
+
+/*
+Expected Output:
+
++-----------+-------+
+| hashtag   | count |
++-----------+-------+
+| HappyDay  | 3     |
+| TechLife  | 2     |
+| WorkLife  | 1     |
++-----------+-------+
+
+Explanation:
+- #HappyDay appears 3 times (highest frequency).
+- #TechLife appears 2 times (second highest).
+- Multiple hashtags appear once, but #WorkLife is chosen because hashtags with the same frequency are sorted in descending alphabetical order.
+*/
+
